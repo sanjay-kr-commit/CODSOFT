@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -62,22 +63,21 @@ fun HomeScreen(
     remove : ( String ) -> Unit
 ){
 
-    var isCreationTabVisible by remember {
+    val isCreationTabVisible = remember {
         mutableStateOf( false )
     }
-    var isUpdating by remember {
+    val isUpdating = remember {
         mutableStateOf( false )
     }
-    var titleField by remember {
+    val titleField = remember {
         mutableStateOf("")
     }
-    var statusFiled by remember {
+    val statusFiled = remember {
         mutableStateOf(TaskStatus.TODO.toString())
     }
-    var descriptionFiled by remember {
+    val descriptionFiled = remember {
         mutableStateOf("")
     }
-
 
     Scaffold(
         Modifier
@@ -85,283 +85,509 @@ fun HomeScreen(
             .padding(10.dp)
             .clip(RoundedCornerShape(10.dp)) ,
         bottomBar = {
-            AnimatedVisibility(
-                visible = !isCreationTabVisible ,
-                enter = slideIn( initialOffset = { IntOffset( it.height , it.width ) } ) ,
-                exit = slideOut( targetOffset = { IntOffset( it.height , it.width ) } ) ,
-            ) {
-                Row (
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(10.dp)
-                    ,
-                    verticalAlignment = Alignment.CenterVertically ,
-                    horizontalArrangement = Arrangement.End
-                ){
-                    Icon(
-                        modifier = Modifier
-                            .wrapContentSize()
-                            .clip(CircleShape)
-                            .background(Color.Gray)
-                            .clickable(!isCreationTabVisible, onClick = {
-                                isCreationTabVisible = true
-                            })
-                            .padding(15.dp)
-                        ,
-                        imageVector = Icons.Filled.Add ,
-                        contentDescription = "" )
-                }
-            }
+            FloatingButton( isCreationTabVisible )
         }
-    ) { it ->
-
+    ) {
         it.calculateTopPadding()
-        // List View
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(5.dp)
-        ) {
-            listTask.forEach { entry ->
-                var showDescription by mutableStateOf(false)
-                item {
-                    AnimatedVisibility(visible = true , enter = fadeIn() ) {
-                        Column (
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 5.dp)
-                                .animateContentSize()
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(Color.Gray)
-                                .padding(10.dp)
-                        ) {
+        TaskList(
+            listTask ,
+            updateEntry ,
+            remove ,
+            isCreationTabVisible ,
+            isUpdating ,
+            titleField ,
+            descriptionFiled ,
+            statusFiled
+        )
+        EditMenu(
+            isCreationTabVisible ,
+            isUpdating ,
+            titleField ,
+            descriptionFiled ,
+            statusFiled ,
+            add ,
+            updateEntry
+        )
+    }
 
-                            Row (
-                                modifier = Modifier.fillMaxWidth() ,
-                                verticalAlignment = Alignment.CenterVertically ,
-                                horizontalArrangement = Arrangement.Start
-                            ) {
+}
 
-                                // status icon
-                                Icon(
-                                    imageVector = entry[TodoEntry.STATUS]!!.value!!.taskStatus.icon
-                                    , contentDescription = "status" ,
-                                    modifier = Modifier
-                                        .clickable(true, onClick = {
-                                            CoroutineScope(Dispatchers.Main).launch {
-                                                updateEntry(
-                                                    entry[TodoEntry.TITLE]!!.value!!,
-                                                    entry[TodoEntry.DESCRIPTION]!!.value,
-                                                    when (entry[TodoEntry.STATUS]!!.value!!.taskStatus.identifier) {
-                                                        TaskStatus.COMPLETED.identifier -> TaskStatus.TODO
-                                                        TaskStatus.TODO.identifier -> TaskStatus.COMPLETED
-                                                        else -> TaskStatus.TODO
-                                                    }
-                                                )
-                                                Log.d(
-                                                    "Icon",
-                                                    entry[TodoEntry.STATUS]!!.value!!
-                                                )
-                                            }
-                                        })
-                                        .padding(5.dp)
-                                        .weight(1f)
-                                )
-                                // title
-                                Spacer(modifier = Modifier.padding( horizontal = 5.dp ) )
-                                Box( modifier = Modifier
-                                    .weight(9f)
-                                    .fillMaxWidth()
-                                    .clickable(true, onClick = {
-                                        showDescription = !showDescription
-                                    }) ) {
-                                    Text(text = "${entry[TodoEntry.TITLE]!!.value}")
-                                }
-                            }
-
-                            // description
-                            if ( showDescription ) {
-                                var editMode by remember {
-                                    mutableStateOf( false )
-                                }
-                                if ( ! editMode ){
-                                    Text(text = "${entry[TodoEntry.DESCRIPTION]!!.value}" ,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .wrapContentHeight()
-                                            .clickable {
-                                                editMode = !editMode
-                                            }
-                                    )
-                                    Button(onClick = {
-                                        remove( entry[TodoEntry.TITLE]!!.value.toString() )
-                                    }) {
-                                        Row (
-                                            modifier = Modifier.fillMaxWidth() ,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon( Icons.Filled.Clear , contentDescription = "remove" )
-                                            Spacer(modifier =  Modifier.padding( horizontal = 5.dp ))
-                                            Text(text =  "Remove Entry" )
-                                        }
-                                    }
-
-                                    Button(onClick = {
-                                        isUpdating = true
-                                        titleField = entry[TodoEntry.TITLE]!!.value!!
-                                        descriptionFiled = entry[TodoEntry.DESCRIPTION]!!.value!!
-                                        statusFiled = entry[TodoEntry.STATUS]!!.value!!
-                                        isCreationTabVisible = true
-                                    }) {
-                                        Row (
-                                            modifier = Modifier.fillMaxWidth() ,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon( Icons.Filled.Edit , contentDescription = "remove" )
-                                            Spacer(modifier =  Modifier.padding( horizontal = 5.dp ))
-                                            Text(text =  "Edit Entry" )
-                                        }
-                                    }
-
-                                }else {
-                                    var editField by remember {
-                                        mutableStateOf( "${entry[TodoEntry.DESCRIPTION]!!.value}" )
-                                    }
-                                    TextField(value = editField , onValueChange ={
-                                        editField = it
-                                    } , modifier = Modifier.fillMaxWidth() )
-                                    Spacer(modifier = Modifier.height( 5.dp ))
-                                    Button(onClick = {
-                                        updateEntry(
-                                            entry[TodoEntry.TITLE]!!.value!!,
-                                            editField,
-                                            entry[TodoEntry.STATUS]!!.value!!.taskStatus
-                                        )
-                                        editMode = false
-                                    }) {
-                                        Text(text = "Apply" )
-                                    }
-                                    BackHandler ( editMode ) {
-                                        editMode = false
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        // creation button
-        AnimatedVisibility(
-            visible = isCreationTabVisible ,
-            enter = fadeIn() ,
-            exit = fadeOut() ,
-        ) {
-            LazyColumn ( modifier = Modifier
-                .fillMaxSize()
-                .padding(10.dp)
-                .clip(RoundedCornerShape(10.dp)) ,
-                verticalArrangement = Arrangement.Bottom ,
-                horizontalAlignment = Alignment.Start
-            ) {
-                item {
-                    Row(modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 10.dp)
-                    ) {
-                        TextField(value = titleField, onValueChange = { titleField = it } ,
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true ,
-                            label = {
-                                Text(text = "Title" )
-                            }
-                        )
-                    }
-                }
-
-                item {
-                    TextField(value = descriptionFiled, onValueChange = { descriptionFiled = it }, label = {
-                        Text(text = "Description")
-                    } , modifier = Modifier
-                        .padding(vertical = 10.dp)
-                        .fillParentMaxWidth()
-                    )
-                }
-
-                item {
-                    Row(
+@Composable
+private fun TaskList(
+    listTask : MutableList<Map<TodoEntry,MutableState<String?>>> ,
+    updateEntry : ( String , String? , TaskStatus? ) -> Unit ,
+    remove : ( String ) -> Unit ,
+    isCreationTabVisible: MutableState<Boolean>,
+    isUpdating : MutableState<Boolean> ,
+    titleField : MutableState<String> ,
+    descriptionFiled : MutableState<String> ,
+    statusFiled : MutableState<String> ,
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(5.dp)
+    ) {
+        listTask.forEach { entry ->
+            val showDescription = mutableStateOf(false)
+            item {
+                AnimatedVisibility(
+                    visible = true ,
+                    enter = fadeIn()
+                ) {
+                    Column (
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 10.dp) ,
-                        verticalAlignment = Alignment.CenterVertically
-
+                            .padding(vertical = 5.dp)
+                            .animateContentSize()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color.Gray)
+                            .padding(10.dp)
                     ) {
-                        Text(text = "Status : ")
-                        for (entry in TaskStatus.entries) {
-                            if ( entry == TaskStatus.UNKNOWN ) continue
-                            Button(onClick = {
-                                statusFiled = entry.toString()
-                            }) {
-                                Icon(
-                                    entry.icon
-                                    , "" ,
-                                    tint = if ( statusFiled == entry.identifier ) Color.DarkGray else LocalContentColor.current ,
-                                    modifier = Modifier
-                                        .padding( horizontal = 2.dp )
-                                )
-                            }
-                            Spacer(modifier = Modifier.width( 5.dp ))
 
-                        }
+                        TaskListTitleBox(entry , updateEntry, showDescription )
+                        TaskListDescriptionBox(
+                            showDescription,
+                            entry,
+                            isUpdating,
+                            titleField,
+                            descriptionFiled,
+                            statusFiled,
+                            isCreationTabVisible,
+                            remove,
+                            updateEntry
+                        )
+
                     }
                 }
-
-                item {
-                    var buttonTitle by remember {
-                        mutableStateOf( if ( isUpdating ) "Update" else "Add Entry" )
-                    }
-                   Row ( modifier = Modifier.fillMaxWidth() ,
-                       horizontalArrangement = Arrangement.SpaceEvenly
-                   ) {
-                       Button(onClick = {
-                           CoroutineScope( Dispatchers.Main ).launch {
-                               if ( titleField.isBlank() ) {
-                                   buttonTitle = "Title cannot be empty"
-                                   delay( 1000 )
-                                   buttonTitle = if ( isUpdating ) "Update" else "Add Entry"
-                               } else {
-                                   if (!isUpdating ) add( titleField , descriptionFiled , statusFiled.taskStatus )
-                                   else updateEntry( titleField , descriptionFiled , statusFiled.taskStatus )
-                               }
-                           }
-                       } , modifier = Modifier
-                           .weight(1f)
-                           .padding(horizontal = 5.dp) ) {
-                           Text(text = buttonTitle  )
-                       }
-
-                       Button(onClick = {
-                           isCreationTabVisible = false
-                           titleField = ""
-                           descriptionFiled = ""
-                           statusFiled = TaskStatus.TODO.toString()
-                           isUpdating = false
-                       } , modifier = Modifier
-                           .weight(1f)
-                           .padding(horizontal = 5.dp)) {
-                           Text(text = "Close"  )
-                       }
-                   }
-                }
-            }
-            BackHandler( isCreationTabVisible ) {
-                isCreationTabVisible = false
-                titleField = ""
-                descriptionFiled = ""
-                statusFiled = TaskStatus.TODO.toString()
-                isUpdating = false
             }
         }
     }
+}
 
+@Composable
+private fun EditMenu(
+    isCreationTabVisible: MutableState<Boolean>,
+    isUpdating : MutableState<Boolean> ,
+    titleField : MutableState<String> ,
+    descriptionFiled : MutableState<String> ,
+    statusFiled : MutableState<String> ,
+    add : ( String , String? , TaskStatus? ) -> Unit ,
+    updateEntry : ( String , String? , TaskStatus? ) -> Unit
+) {
+    AnimatedVisibility(
+        visible = isCreationTabVisible.value ,
+        enter = fadeIn() ,
+        exit = fadeOut() ,
+    ) {
+        LazyColumn ( modifier = Modifier
+            .fillMaxSize()
+            .padding(10.dp)
+            .clip(RoundedCornerShape(10.dp)) ,
+            verticalArrangement = Arrangement.Bottom ,
+            horizontalAlignment = Alignment.Start
+        ) {
+            item {
+                EditMenuTitleField(titleField)
+            }
+            item {
+                EditMenuDescriptionField(descriptionFiled)
+            }
+            item {
+                EditMenuStatusButton(statusFiled)
+            }
+            item {
+                EditMenuApplyButton(
+                    isCreationTabVisible ,
+                    isUpdating ,
+                    titleField ,
+                    descriptionFiled ,
+                    statusFiled ,
+                    add ,
+                    updateEntry
+                )
+            }
+        }
+        BackHandler( isCreationTabVisible.value ) {
+            isCreationTabVisible.value = false
+            titleField.value = ""
+            descriptionFiled.value = ""
+            statusFiled.value = TaskStatus.TODO.toString()
+            isUpdating.value = false
+        }
+    }
+}
+
+@Composable
+private fun FloatingButton(
+    isCreationTabVisible : MutableState<Boolean>
+){
+    AnimatedVisibility(
+        visible = !isCreationTabVisible.value ,
+        enter = slideIn( initialOffset = { IntOffset( it.height , it.width ) } ) ,
+        exit = slideOut( targetOffset = { IntOffset( it.height , it.width ) } ) ,
+    ) {
+        Row (
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(10.dp)
+            ,
+            verticalAlignment = Alignment.CenterVertically ,
+            horizontalArrangement = Arrangement.End
+        ){
+            Icon(
+                modifier = Modifier
+                    .wrapContentSize()
+                    .clip(CircleShape)
+                    .background(Color.Gray)
+                    .clickable(!isCreationTabVisible.value, onClick = {
+                        isCreationTabVisible.value = true
+                    })
+                    .padding(15.dp)
+                ,
+                imageVector = Icons.Filled.Add ,
+                contentDescription = "" )
+        }
+    }
+}
+
+@Composable
+private fun TaskListTitleBox(
+    entry : Map<TodoEntry,MutableState<String?>>,
+    updateEntry: (String, String?, TaskStatus?) -> Unit,
+    showDescription: MutableState<Boolean>
+) {
+    Row (
+        modifier = Modifier.fillMaxWidth() ,
+        verticalAlignment = Alignment.CenterVertically ,
+        horizontalArrangement = Arrangement.Start
+    ) {
+        ListTaskStatusIndicator(entry , updateEntry )
+        Spacer(modifier = Modifier.padding( horizontal = 5.dp ) )
+        ListTaskTitle(entry , showDescription )
+    }
+}
+
+@Composable
+private fun TaskListDescriptionBox(
+    showDescription: MutableState<Boolean>,
+    entry: Map<TodoEntry, MutableState<String?>>,
+    isUpdating: MutableState<Boolean>,
+    titleField: MutableState<String>,
+    descriptionFiled: MutableState<String>,
+    statusFiled: MutableState<String>,
+    isCreationTabVisible: MutableState<Boolean>,
+    remove: (String) -> Unit,
+    updateEntry: (String, String?, TaskStatus?) -> Unit
+) {
+    if ( showDescription.value ) {
+        val editMode = remember {
+            mutableStateOf( false )
+        }
+        if ( editMode.value ) ListTaskDescriptionBoxEditMode(
+            entry ,
+            updateEntry ,
+            editMode
+        )
+        else ListTaskDescriptionBoxCardView(
+            entry ,
+            editMode ,
+            isUpdating ,
+            titleField ,
+            descriptionFiled ,
+            statusFiled ,
+            isCreationTabVisible ,
+            remove
+        )
+    }
+}
+
+@Composable
+private fun ListTaskDescriptionBoxEditMode(
+    entry: Map<TodoEntry, MutableState<String?>> ,
+    updateEntry: (String, String?, TaskStatus?) -> Unit ,
+    editMode : MutableState<Boolean>
+) {
+    var editField by remember {
+        mutableStateOf( "${entry[TodoEntry.DESCRIPTION]!!.value}" )
+    }
+    TextField(value = editField , onValueChange ={
+        editField = it
+    } , modifier = Modifier.fillMaxWidth() )
+    Spacer(modifier = Modifier.height( 5.dp ))
+    Button(onClick = {
+        updateEntry(
+            entry[TodoEntry.TITLE]!!.value!!,
+            editField,
+            entry[TodoEntry.STATUS]!!.value!!.taskStatus
+        )
+        editMode.value = false
+    }) {
+        Text(text = "Apply" )
+    }
+    BackHandler ( editMode.value ) {
+        editMode.value = false
+    }
+}
+
+@Composable
+private fun ListTaskDescriptionBoxCardView(
+    entry: Map<TodoEntry, MutableState<String?>>,
+    editMode: MutableState<Boolean>,
+    isUpdating: MutableState<Boolean>,
+    titleField: MutableState<String>,
+    descriptionFiled: MutableState<String>,
+    statusFiled: MutableState<String>,
+    isCreationTabVisible: MutableState<Boolean>,
+    remove: (String) -> Unit
+) {
+    ListTaskDescriptionBoxDescription(entry , editMode )
+    ListTaskDescriptionBoxButtons(
+        entry ,
+        isUpdating ,
+        titleField ,
+        descriptionFiled ,
+        statusFiled ,
+        isCreationTabVisible ,
+        remove
+    )
+}
+
+@Composable
+private fun ListTaskDescriptionBoxDescription(
+    entry: Map<TodoEntry, MutableState<String?>>,
+    editMode: MutableState<Boolean>
+) {
+    Text(text = "${entry[TodoEntry.DESCRIPTION]!!.value}" ,
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentHeight()
+            .clickable {
+                editMode.value = !editMode.value
+            }
+    )
+}
+
+@Composable
+private fun ListTaskDescriptionBoxButtons(
+    entry: Map<TodoEntry, MutableState<String?>>,
+    isUpdating: MutableState<Boolean>,
+    titleField: MutableState<String>,
+    descriptionFiled: MutableState<String>,
+    statusFiled: MutableState<String>,
+    isCreationTabVisible: MutableState<Boolean>,
+    remove: (String) -> Unit
+) {
+
+    ListTaskDescriptionBoxRemoveEntryButton(entry , remove)
+    ListTaskDescriptionBoxEditEntryButton(
+        entry ,
+        isUpdating ,
+        titleField ,
+        descriptionFiled ,
+        statusFiled ,
+        isCreationTabVisible
+    )
+}
+
+@Composable
+private fun ListTaskDescriptionBoxRemoveEntryButton(
+    entry: Map<TodoEntry, MutableState<String?>>,
+    remove: (String) -> Unit
+) {
+    Button(onClick = {
+        remove( entry[TodoEntry.TITLE]!!.value.toString() )
+    }) {
+        Row (
+            modifier = Modifier.fillMaxWidth() ,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon( Icons.Filled.Clear , contentDescription = "remove" )
+            Spacer(modifier =  Modifier.padding( horizontal = 5.dp ))
+            Text(text =  "Remove Entry" )
+        }
+    }
+}
+
+@Composable
+private fun ListTaskDescriptionBoxEditEntryButton(
+    entry: Map<TodoEntry, MutableState<String?>>,
+    isUpdating: MutableState<Boolean>,
+    titleField: MutableState<String>,
+    descriptionFiled: MutableState<String>,
+    statusFiled: MutableState<String>,
+    isCreationTabVisible: MutableState<Boolean>
+) {
+    Button(onClick = {
+        isUpdating.value = true
+        titleField.value = entry[TodoEntry.TITLE]!!.value!!
+        descriptionFiled.value = entry[TodoEntry.DESCRIPTION]!!.value!!
+        statusFiled.value = entry[TodoEntry.STATUS]!!.value!!
+        isCreationTabVisible.value = true
+    }) {
+        Row (
+            modifier = Modifier.fillMaxWidth() ,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon( Icons.Filled.Edit , contentDescription = "remove" )
+            Spacer(modifier =  Modifier.padding( horizontal = 5.dp ))
+            Text(text =  "Edit Entry" )
+        }
+    }
+
+}
+
+@Composable
+private fun RowScope.ListTaskTitle(
+    entry : Map<TodoEntry,MutableState<String?>> ,
+    showDescription : MutableState<Boolean>
+) {
+    Box( modifier = Modifier
+        .weight(9f)
+        .fillMaxWidth()
+        .clickable(true, onClick = {
+            showDescription.value = !showDescription.value
+        }) ) {
+        Text(text = "${entry[TodoEntry.TITLE]!!.value}")
+    }
+}
+
+@Composable
+private fun RowScope.ListTaskStatusIndicator(
+    entry : Map<TodoEntry,MutableState<String?>> ,
+    updateEntry : ( String , String? , TaskStatus? ) -> Unit
+) {
+    Icon(
+        imageVector = entry[TodoEntry.STATUS]!!.value!!.taskStatus.icon
+        , contentDescription = "status" ,
+        modifier = Modifier
+            .clickable(true, onClick = {
+                CoroutineScope(Dispatchers.Main).launch {
+                    updateEntry(
+                        entry[TodoEntry.TITLE]!!.value!!,
+                        entry[TodoEntry.DESCRIPTION]!!.value,
+                        when (entry[TodoEntry.STATUS]!!.value!!.taskStatus.identifier) {
+                            TaskStatus.COMPLETED.identifier -> TaskStatus.TODO
+                            TaskStatus.TODO.identifier -> TaskStatus.COMPLETED
+                            else -> TaskStatus.TODO
+                        }
+                    )
+                    Log.d(
+                        "Icon",
+                        entry[TodoEntry.STATUS]!!.value!!
+                    )
+                }
+            })
+            .padding(5.dp)
+            .weight(1f)
+    )
+}
+
+@Composable
+private fun EditMenuTitleField(
+    titleField : MutableState<String>
+) {
+    Row(modifier = Modifier
+        .fillMaxWidth()
+        .padding(vertical = 10.dp)
+    ) {
+        TextField(value = titleField.value, onValueChange = { titleField.value = it } ,
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true ,
+            label = {
+                Text(text = "Title" )
+            }
+        )
+    }
+}
+
+@Composable
+private fun EditMenuDescriptionField(
+    descriptionFiled : MutableState<String>
+) {
+    TextField(value = descriptionFiled.value, onValueChange = { descriptionFiled.value = it }, label = {
+        Text(text = "Description")
+    } , modifier = Modifier
+        .padding(vertical = 10.dp)
+        .fillMaxWidth()
+    )
+}
+
+@Composable
+private fun EditMenuStatusButton(
+    statusFiled : MutableState<String>
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 10.dp) ,
+        verticalAlignment = Alignment.CenterVertically
+
+    ) {
+        Text(text = "Status : ")
+        for (entry in TaskStatus.entries) {
+            if ( entry == TaskStatus.UNKNOWN ) continue
+            Button(onClick = {
+                statusFiled.value = entry.toString()
+            }) {
+                Icon(
+                    entry.icon
+                    , "" ,
+                    tint = if ( statusFiled.value == entry.identifier ) Color.DarkGray else LocalContentColor.current ,
+                    modifier = Modifier
+                        .padding( horizontal = 2.dp )
+                )
+            }
+            Spacer(modifier = Modifier.width( 5.dp ))
+
+        }
+    }
+}
+
+@Composable
+private fun EditMenuApplyButton(
+    isCreationTabVisible: MutableState<Boolean>,
+    isUpdating : MutableState<Boolean> ,
+    titleField : MutableState<String> ,
+    descriptionFiled : MutableState<String> ,
+    statusFiled : MutableState<String> ,
+    add : ( String , String? , TaskStatus? ) -> Unit ,
+    updateEntry : ( String , String? , TaskStatus? ) -> Unit
+) {
+
+    var buttonTitle by remember {
+        mutableStateOf( if ( isUpdating.value ) "Update" else "Add Entry" )
+    }
+    Row ( modifier = Modifier.fillMaxWidth() ,
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        Button(onClick = {
+            CoroutineScope( Dispatchers.Main ).launch {
+                if ( titleField.value.isBlank() ) {
+                    buttonTitle = "Title cannot be empty"
+                    delay( 1000 )
+                    buttonTitle = if ( isUpdating.value ) "Update" else "Add Entry"
+                } else {
+                    if (!isUpdating.value ) add( titleField.value , descriptionFiled.value , statusFiled.value.taskStatus )
+                    else updateEntry( titleField.value, descriptionFiled.value , statusFiled.value.taskStatus )
+                }
+            }
+        } , modifier = Modifier
+            .weight(1f)
+            .padding(horizontal = 5.dp) ) {
+            Text(text = buttonTitle  )
+        }
+
+        Button(onClick = {
+            isCreationTabVisible.value = false
+            titleField.value = ""
+            descriptionFiled.value = ""
+            statusFiled.value = TaskStatus.TODO.toString()
+            isUpdating.value = false
+        } , modifier = Modifier
+            .weight(1f)
+            .padding(horizontal = 5.dp)) {
+            Text(text = "Close"  )
+        }
+    }
 }
