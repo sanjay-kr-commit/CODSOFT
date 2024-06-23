@@ -7,7 +7,6 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
-import codsoft.internship.sanjay.todolist.TodoEntry.Companion.transform
 
 class TodoListDB(
     context : Context ,
