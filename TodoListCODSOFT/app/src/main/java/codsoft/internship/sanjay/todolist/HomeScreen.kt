@@ -416,7 +416,7 @@ private fun ListTaskDescriptionBoxDuplicateButton(
             modifier = Modifier.fillMaxWidth() ,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon( Icons.Filled.Clear , contentDescription = "remove" )
+            Icon( Icons.Filled.Add , contentDescription = "remove" )
             Spacer(modifier =  Modifier.padding( horizontal = 5.dp ))
             Text(text =  "Duplicate Entry" )
         }
