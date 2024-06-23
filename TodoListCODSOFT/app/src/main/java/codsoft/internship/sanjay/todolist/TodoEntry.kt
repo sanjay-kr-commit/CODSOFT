@@ -4,6 +4,7 @@ enum class TodoEntry(
     private val identifier : String
 ) {
     TABLE( "TODO_LIST" ) ,
+    ID( "TIMESTAMP" ) ,
     TITLE( "TITLE" ) ,
     DESCRIPTION( "DESCRIPTION" ) ,
     STATUS( "STATUS" ),

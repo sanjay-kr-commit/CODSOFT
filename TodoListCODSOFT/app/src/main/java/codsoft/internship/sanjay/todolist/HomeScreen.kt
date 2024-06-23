@@ -51,7 +51,6 @@ import androidx.compose.ui.unit.dp
 import codsoft.internship.sanjay.todolist.TaskStatus.Companion.taskStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -60,7 +59,7 @@ fun HomeScreen(
     // order of argument -> ( TITLE , DESCRIPTION , STATUS )
     add : ( String , String? , TaskStatus? ) -> Unit ,
     updateEntry : ( Map<TodoEntry,MutableState<String?>> , String , String? , TaskStatus? ) -> Unit ,
-    remove : ( Map<TodoEntry,MutableState<String?>> , String ) -> Unit
+    remove : ( Map<TodoEntry,MutableState<String?>> ) -> Unit
 ){
 
     val isCreationTabVisible = remember {
@@ -98,7 +97,8 @@ fun HomeScreen(
             editEntry ,
             titleField ,
             descriptionFiled ,
-            statusFiled
+            statusFiled ,
+            add
         )
         EditMenu(
             isCreationTabVisible ,
@@ -117,12 +117,13 @@ fun HomeScreen(
 private fun TaskList(
     listTask : MutableList<Map<TodoEntry,MutableState<String?>>> ,
     updateEntry : ( Map<TodoEntry,MutableState<String?>> , String , String? , TaskStatus? ) -> Unit ,
-    remove : ( Map<TodoEntry,MutableState<String?>> ,String ) -> Unit ,
+    remove : ( Map<TodoEntry,MutableState<String?>> ) -> Unit ,
     isCreationTabVisible: MutableState<Boolean>,
     editEntry : MutableState<Map<TodoEntry,MutableState<String?>>?> ,
     titleField : MutableState<String> ,
     descriptionFiled : MutableState<String> ,
     statusFiled : MutableState<String> ,
+    add: (String, String?, TaskStatus?) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -156,7 +157,8 @@ private fun TaskList(
                             statusFiled,
                             isCreationTabVisible,
                             remove,
-                            updateEntry
+                            updateEntry ,
+                            add
                         )
 
                     }
@@ -278,8 +280,9 @@ private fun TaskListDescriptionBox(
     descriptionFiled: MutableState<String>,
     statusFiled: MutableState<String>,
     isCreationTabVisible: MutableState<Boolean>,
-    remove: (Map<TodoEntry,MutableState<String?>> ,String) -> Unit,
-    updateEntry: (Map<TodoEntry,MutableState<String?>> ,String, String?, TaskStatus?) -> Unit
+    remove: (Map<TodoEntry,MutableState<String?>> ) -> Unit,
+    updateEntry: (Map<TodoEntry,MutableState<String?>> ,String, String?, TaskStatus?) -> Unit ,
+    add: (String, String?, TaskStatus?) -> Unit
 ) {
     if ( showDescription.value ) {
         val editMode = remember {
@@ -298,7 +301,8 @@ private fun TaskListDescriptionBox(
             descriptionFiled ,
             statusFiled ,
             isCreationTabVisible ,
-            remove
+            remove ,
+            add
         )
     }
 }
@@ -341,7 +345,8 @@ private fun ListTaskDescriptionBoxCardView(
     descriptionFiled: MutableState<String>,
     statusFiled: MutableState<String>,
     isCreationTabVisible: MutableState<Boolean>,
-    remove: (Map<TodoEntry,MutableState<String?>> ,String) -> Unit
+    remove: (Map<TodoEntry,MutableState<String?>>) -> Unit ,
+    add: (String, String?, TaskStatus?) -> Unit
 ) {
     ListTaskDescriptionBoxDescription(entry , editMode )
     ListTaskDescriptionBoxButtons(
@@ -351,7 +356,8 @@ private fun ListTaskDescriptionBoxCardView(
         descriptionFiled ,
         statusFiled ,
         isCreationTabVisible ,
-        remove
+        remove ,
+        add
     )
 }
 
@@ -378,7 +384,8 @@ private fun ListTaskDescriptionBoxButtons(
     descriptionFiled: MutableState<String>,
     statusFiled: MutableState<String>,
     isCreationTabVisible: MutableState<Boolean>,
-    remove: (Map<TodoEntry,MutableState<String?>> ,String) -> Unit
+    remove: (Map<TodoEntry,MutableState<String?>> ) -> Unit ,
+    add: (String, String?, TaskStatus?) -> Unit
 ) {
 
     ListTaskDescriptionBoxRemoveEntryButton(entry , remove)
@@ -390,15 +397,39 @@ private fun ListTaskDescriptionBoxButtons(
         statusFiled ,
         isCreationTabVisible
     )
+    ListTaskDescriptionBoxDuplicateButton( entry , add )
+}
+
+@Composable
+private fun ListTaskDescriptionBoxDuplicateButton(
+    entry: Map<TodoEntry, MutableState<String?>>,
+    add: (String, String?, TaskStatus?) -> Unit
+) {
+    Button(onClick = {
+        add(
+            entry[TodoEntry.TITLE]!!.value!! ,
+            entry[TodoEntry.DESCRIPTION]!!.value!! ,
+            entry[TodoEntry.STATUS]!!.value!!.taskStatus
+        )
+    }) {
+        Row (
+            modifier = Modifier.fillMaxWidth() ,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon( Icons.Filled.Clear , contentDescription = "remove" )
+            Spacer(modifier =  Modifier.padding( horizontal = 5.dp ))
+            Text(text =  "Duplicate Entry" )
+        }
+    }
 }
 
 @Composable
 private fun ListTaskDescriptionBoxRemoveEntryButton(
     entry: Map<TodoEntry, MutableState<String?>>,
-    remove: (Map<TodoEntry,MutableState<String?>> ,String) -> Unit
+    remove: (Map<TodoEntry,MutableState<String?>> ) -> Unit
 ) {
     Button(onClick = {
-        remove( entry, entry[TodoEntry.TITLE]!!.value.toString() )
+        remove( entry )
     }) {
         Row (
             modifier = Modifier.fillMaxWidth() ,
@@ -562,27 +593,19 @@ private fun EditMenuApplyButton(
         mutableStateOf( editEntry.value != null )
     }
 
-    var buttonTitle by remember {
-        mutableStateOf( if ( isUpdating ) "Update" else "Add Entry" )
-    }
     Row ( modifier = Modifier.fillMaxWidth() ,
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
+
         Button(onClick = {
             CoroutineScope( Dispatchers.Main ).launch {
-                if ( titleField.value.isBlank() ) {
-                    buttonTitle = "Title cannot be empty"
-                    delay( 1000 )
-                    buttonTitle = if ( isUpdating ) "Update" else "Add Entry"
-                } else {
-                    if ( !isUpdating ) add( titleField.value , descriptionFiled.value , statusFiled.value.taskStatus )
-                    else updateEntry( editEntry.value!! , titleField.value, descriptionFiled.value , statusFiled.value.taskStatus )
-                }
+                if ( !isUpdating ) add( titleField.value , descriptionFiled.value , statusFiled.value.taskStatus )
+                else updateEntry( editEntry.value!! , titleField.value, descriptionFiled.value , statusFiled.value.taskStatus )
             }
         } , modifier = Modifier
             .weight(1f)
             .padding(horizontal = 5.dp) ) {
-            Text(text = buttonTitle  )
+            Text(text = if ( isUpdating ) "Update" else "Add Entry"  )
         }
 
         Button(onClick = {

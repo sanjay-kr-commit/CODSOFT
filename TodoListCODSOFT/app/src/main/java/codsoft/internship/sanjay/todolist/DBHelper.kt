@@ -14,10 +14,10 @@ fun TodoListDB.insert( contentValueBlock : ContentValues.() -> Unit ) {
     writableDatabase.insert( TodoEntry.TABLE.toString() , null , contentValue )
 }
 
-fun TodoListDB.delete( title : String ) : Boolean = try {
-    val entryDeleted = writableDatabase.delete( TodoEntry.TABLE.toString() , "${TodoEntry.TITLE}=?" , arrayOf( title ) )
+fun TodoListDB.delete(id : String ) : Boolean = try {
+    val entryDeleted = writableDatabase.delete( TodoEntry.TABLE.toString() , "${TodoEntry.ID}=?" , arrayOf( id ) )
     if ( entryDeleted == 0 ) throw Exception(
-        "0 Column delete title passed : \"$title\""
+        "0 Column delete title passed : \"$id\""
     )
     true
 } catch ( e : Exception ) {
