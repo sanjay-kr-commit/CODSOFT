@@ -59,16 +59,14 @@ fun HomeScreen(
     listTask : MutableList<Map<TodoEntry,MutableState<String?>>> ,
     // order of argument -> ( TITLE , DESCRIPTION , STATUS )
     add : ( String , String? , TaskStatus? ) -> Unit ,
-    updateEntry : ( String , String? , TaskStatus? ) -> Unit ,
-    remove : ( String ) -> Unit
+    updateEntry : ( Map<TodoEntry,MutableState<String?>> , String , String? , TaskStatus? ) -> Unit ,
+    remove : ( Map<TodoEntry,MutableState<String?>> , String ) -> Unit
 ){
 
     val isCreationTabVisible = remember {
         mutableStateOf( false )
     }
-    val isUpdating = remember {
-        mutableStateOf( false )
-    }
+
     val titleField = remember {
         mutableStateOf("")
     }
@@ -77,6 +75,9 @@ fun HomeScreen(
     }
     val descriptionFiled = remember {
         mutableStateOf("")
+    }
+    val editEntry : MutableState<Map<TodoEntry,MutableState<String?>>?> = remember {
+        mutableStateOf( null )
     }
 
     Scaffold(
@@ -94,14 +95,14 @@ fun HomeScreen(
             updateEntry ,
             remove ,
             isCreationTabVisible ,
-            isUpdating ,
+            editEntry ,
             titleField ,
             descriptionFiled ,
             statusFiled
         )
         EditMenu(
             isCreationTabVisible ,
-            isUpdating ,
+            editEntry ,
             titleField ,
             descriptionFiled ,
             statusFiled ,
@@ -115,10 +116,10 @@ fun HomeScreen(
 @Composable
 private fun TaskList(
     listTask : MutableList<Map<TodoEntry,MutableState<String?>>> ,
-    updateEntry : ( String , String? , TaskStatus? ) -> Unit ,
-    remove : ( String ) -> Unit ,
+    updateEntry : ( Map<TodoEntry,MutableState<String?>> , String , String? , TaskStatus? ) -> Unit ,
+    remove : ( Map<TodoEntry,MutableState<String?>> ,String ) -> Unit ,
     isCreationTabVisible: MutableState<Boolean>,
-    isUpdating : MutableState<Boolean> ,
+    editEntry : MutableState<Map<TodoEntry,MutableState<String?>>?> ,
     titleField : MutableState<String> ,
     descriptionFiled : MutableState<String> ,
     statusFiled : MutableState<String> ,
@@ -149,7 +150,7 @@ private fun TaskList(
                         TaskListDescriptionBox(
                             showDescription,
                             entry,
-                            isUpdating,
+                            editEntry,
                             titleField,
                             descriptionFiled,
                             statusFiled,
@@ -168,12 +169,12 @@ private fun TaskList(
 @Composable
 private fun EditMenu(
     isCreationTabVisible: MutableState<Boolean>,
-    isUpdating : MutableState<Boolean> ,
+    editEntry : MutableState<Map<TodoEntry,MutableState<String?>>?>  ,
     titleField : MutableState<String> ,
     descriptionFiled : MutableState<String> ,
     statusFiled : MutableState<String> ,
     add : ( String , String? , TaskStatus? ) -> Unit ,
-    updateEntry : ( String , String? , TaskStatus? ) -> Unit
+    updateEntry : ( Map<TodoEntry,MutableState<String?>> ,String , String? , TaskStatus? ) -> Unit
 ) {
     AnimatedVisibility(
         visible = isCreationTabVisible.value ,
@@ -199,7 +200,7 @@ private fun EditMenu(
             item {
                 EditMenuApplyButton(
                     isCreationTabVisible ,
-                    isUpdating ,
+                    editEntry ,
                     titleField ,
                     descriptionFiled ,
                     statusFiled ,
@@ -213,7 +214,7 @@ private fun EditMenu(
             titleField.value = ""
             descriptionFiled.value = ""
             statusFiled.value = TaskStatus.TODO.toString()
-            isUpdating.value = false
+            editEntry.value = null
         }
     }
 }
@@ -254,7 +255,7 @@ private fun FloatingButton(
 @Composable
 private fun TaskListTitleBox(
     entry : Map<TodoEntry,MutableState<String?>>,
-    updateEntry: (String, String?, TaskStatus?) -> Unit,
+    updateEntry: ( Map<TodoEntry,MutableState<String?>> ,String, String?, TaskStatus?) -> Unit,
     showDescription: MutableState<Boolean>
 ) {
     Row (
@@ -272,13 +273,13 @@ private fun TaskListTitleBox(
 private fun TaskListDescriptionBox(
     showDescription: MutableState<Boolean>,
     entry: Map<TodoEntry, MutableState<String?>>,
-    isUpdating: MutableState<Boolean>,
+    editEntry : MutableState<Map<TodoEntry,MutableState<String?>>?> ,
     titleField: MutableState<String>,
     descriptionFiled: MutableState<String>,
     statusFiled: MutableState<String>,
     isCreationTabVisible: MutableState<Boolean>,
-    remove: (String) -> Unit,
-    updateEntry: (String, String?, TaskStatus?) -> Unit
+    remove: (Map<TodoEntry,MutableState<String?>> ,String) -> Unit,
+    updateEntry: (Map<TodoEntry,MutableState<String?>> ,String, String?, TaskStatus?) -> Unit
 ) {
     if ( showDescription.value ) {
         val editMode = remember {
@@ -292,7 +293,7 @@ private fun TaskListDescriptionBox(
         else ListTaskDescriptionBoxCardView(
             entry ,
             editMode ,
-            isUpdating ,
+            editEntry ,
             titleField ,
             descriptionFiled ,
             statusFiled ,
@@ -305,7 +306,7 @@ private fun TaskListDescriptionBox(
 @Composable
 private fun ListTaskDescriptionBoxEditMode(
     entry: Map<TodoEntry, MutableState<String?>> ,
-    updateEntry: (String, String?, TaskStatus?) -> Unit ,
+    updateEntry: (Map<TodoEntry,MutableState<String?>> ,String, String?, TaskStatus?) -> Unit ,
     editMode : MutableState<Boolean>
 ) {
     var editField by remember {
@@ -317,6 +318,7 @@ private fun ListTaskDescriptionBoxEditMode(
     Spacer(modifier = Modifier.height( 5.dp ))
     Button(onClick = {
         updateEntry(
+            entry ,
             entry[TodoEntry.TITLE]!!.value!!,
             editField,
             entry[TodoEntry.STATUS]!!.value!!.taskStatus
@@ -334,17 +336,17 @@ private fun ListTaskDescriptionBoxEditMode(
 private fun ListTaskDescriptionBoxCardView(
     entry: Map<TodoEntry, MutableState<String?>>,
     editMode: MutableState<Boolean>,
-    isUpdating: MutableState<Boolean>,
+    editEntry : MutableState<Map<TodoEntry,MutableState<String?>>?> ,
     titleField: MutableState<String>,
     descriptionFiled: MutableState<String>,
     statusFiled: MutableState<String>,
     isCreationTabVisible: MutableState<Boolean>,
-    remove: (String) -> Unit
+    remove: (Map<TodoEntry,MutableState<String?>> ,String) -> Unit
 ) {
     ListTaskDescriptionBoxDescription(entry , editMode )
     ListTaskDescriptionBoxButtons(
         entry ,
-        isUpdating ,
+        editEntry ,
         titleField ,
         descriptionFiled ,
         statusFiled ,
@@ -371,18 +373,18 @@ private fun ListTaskDescriptionBoxDescription(
 @Composable
 private fun ListTaskDescriptionBoxButtons(
     entry: Map<TodoEntry, MutableState<String?>>,
-    isUpdating: MutableState<Boolean>,
+    editEntry : MutableState<Map<TodoEntry,MutableState<String?>>?> ,
     titleField: MutableState<String>,
     descriptionFiled: MutableState<String>,
     statusFiled: MutableState<String>,
     isCreationTabVisible: MutableState<Boolean>,
-    remove: (String) -> Unit
+    remove: (Map<TodoEntry,MutableState<String?>> ,String) -> Unit
 ) {
 
     ListTaskDescriptionBoxRemoveEntryButton(entry , remove)
     ListTaskDescriptionBoxEditEntryButton(
         entry ,
-        isUpdating ,
+        editEntry ,
         titleField ,
         descriptionFiled ,
         statusFiled ,
@@ -393,10 +395,10 @@ private fun ListTaskDescriptionBoxButtons(
 @Composable
 private fun ListTaskDescriptionBoxRemoveEntryButton(
     entry: Map<TodoEntry, MutableState<String?>>,
-    remove: (String) -> Unit
+    remove: (Map<TodoEntry,MutableState<String?>> ,String) -> Unit
 ) {
     Button(onClick = {
-        remove( entry[TodoEntry.TITLE]!!.value.toString() )
+        remove( entry, entry[TodoEntry.TITLE]!!.value.toString() )
     }) {
         Row (
             modifier = Modifier.fillMaxWidth() ,
@@ -412,14 +414,14 @@ private fun ListTaskDescriptionBoxRemoveEntryButton(
 @Composable
 private fun ListTaskDescriptionBoxEditEntryButton(
     entry: Map<TodoEntry, MutableState<String?>>,
-    isUpdating: MutableState<Boolean>,
+    editEntry : MutableState<Map<TodoEntry,MutableState<String?>>?> ,
     titleField: MutableState<String>,
     descriptionFiled: MutableState<String>,
     statusFiled: MutableState<String>,
     isCreationTabVisible: MutableState<Boolean>
 ) {
     Button(onClick = {
-        isUpdating.value = true
+        editEntry.value = entry
         titleField.value = entry[TodoEntry.TITLE]!!.value!!
         descriptionFiled.value = entry[TodoEntry.DESCRIPTION]!!.value!!
         statusFiled.value = entry[TodoEntry.STATUS]!!.value!!
@@ -455,7 +457,7 @@ private fun RowScope.ListTaskTitle(
 @Composable
 private fun RowScope.ListTaskStatusIndicator(
     entry : Map<TodoEntry,MutableState<String?>> ,
-    updateEntry : ( String , String? , TaskStatus? ) -> Unit
+    updateEntry : ( Map<TodoEntry,MutableState<String?>> ,String , String? , TaskStatus? ) -> Unit
 ) {
     Icon(
         imageVector = entry[TodoEntry.STATUS]!!.value!!.taskStatus.icon
@@ -464,6 +466,7 @@ private fun RowScope.ListTaskStatusIndicator(
             .clickable(true, onClick = {
                 CoroutineScope(Dispatchers.Main).launch {
                     updateEntry(
+                        entry,
                         entry[TodoEntry.TITLE]!!.value!!,
                         entry[TodoEntry.DESCRIPTION]!!.value,
                         when (entry[TodoEntry.STATUS]!!.value!!.taskStatus.identifier) {
@@ -547,16 +550,20 @@ private fun EditMenuStatusButton(
 @Composable
 private fun EditMenuApplyButton(
     isCreationTabVisible: MutableState<Boolean>,
-    isUpdating : MutableState<Boolean> ,
-    titleField : MutableState<String> ,
-    descriptionFiled : MutableState<String> ,
-    statusFiled : MutableState<String> ,
-    add : ( String , String? , TaskStatus? ) -> Unit ,
-    updateEntry : ( String , String? , TaskStatus? ) -> Unit
+    editEntry: MutableState<Map<TodoEntry, MutableState<String?>>?>,
+    titleField : MutableState<String>,
+    descriptionFiled : MutableState<String>,
+    statusFiled : MutableState<String>,
+    add : ( String , String? , TaskStatus? ) -> Unit,
+    updateEntry : ( Map<TodoEntry,MutableState<String?>> ,String , String? , TaskStatus? ) -> Unit
 ) {
 
+    val isUpdating by remember {
+        mutableStateOf( editEntry.value != null )
+    }
+
     var buttonTitle by remember {
-        mutableStateOf( if ( isUpdating.value ) "Update" else "Add Entry" )
+        mutableStateOf( if ( isUpdating ) "Update" else "Add Entry" )
     }
     Row ( modifier = Modifier.fillMaxWidth() ,
         horizontalArrangement = Arrangement.SpaceEvenly
@@ -566,10 +573,10 @@ private fun EditMenuApplyButton(
                 if ( titleField.value.isBlank() ) {
                     buttonTitle = "Title cannot be empty"
                     delay( 1000 )
-                    buttonTitle = if ( isUpdating.value ) "Update" else "Add Entry"
+                    buttonTitle = if ( isUpdating ) "Update" else "Add Entry"
                 } else {
-                    if (!isUpdating.value ) add( titleField.value , descriptionFiled.value , statusFiled.value.taskStatus )
-                    else updateEntry( titleField.value, descriptionFiled.value , statusFiled.value.taskStatus )
+                    if ( !isUpdating ) add( titleField.value , descriptionFiled.value , statusFiled.value.taskStatus )
+                    else updateEntry( editEntry.value!! , titleField.value, descriptionFiled.value , statusFiled.value.taskStatus )
                 }
             }
         } , modifier = Modifier
@@ -583,7 +590,7 @@ private fun EditMenuApplyButton(
             titleField.value = ""
             descriptionFiled.value = ""
             statusFiled.value = TaskStatus.TODO.toString()
-            isUpdating.value = false
+            editEntry.value = null
         } , modifier = Modifier
             .weight(1f)
             .padding(horizontal = 5.dp)) {

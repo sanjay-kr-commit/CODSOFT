@@ -8,17 +8,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import codsoft.internship.sanjay.todolist.ui.theme.TodoListCODSOFTTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-
-// TODO Task Editing: Provide the ability to edit task titles and descriptions.
-// TODO Task Completion: Allow users to mark tasks as completed or active.
-// TODO Task Deletion: Add the option to delete tasks from the list.
-// TODO Local Data Storage: Save tasks locally on the device for data persistence.
-// TODO User Interface: Design an intuitive and user-friendly interface.
 
 class MainActivity : ComponentActivity() {
 
@@ -39,22 +34,17 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        val remove : ( String ) -> Unit = { title ->
+        val remove : ( Map<TodoEntry,MutableState<String?>> , String ) -> Unit = { entry , title ->
             try {
                 mainViewModel.todoListDB.delete( title )
-                for ( entry in mainViewModel.todoList ) {
-                    if ( entry[TodoEntry.TITLE]?.value == title ) {
-                        mainViewModel.todoList.remove( entry )
-                        break
-                    }
-                }
+                mainViewModel.todoList.remove( entry )
             } catch ( e : Exception ) {
                 Log.e( "FailedToDeleteEntry" ,e.stackTraceToString() )
             }
         }
 
         // order of argument -> ( TITLE , DESCRIPTION , STATUS )
-        val add : (String,String?,TaskStatus?) -> Unit = { parsedTitle , parsedDescription , parsedStatus ->
+        val add : ( String,String?,TaskStatus?) -> Unit = { parsedTitle , parsedDescription , parsedStatus ->
             try {
                 for ( entry in mainViewModel.todoList ) {
                     if ( entry[TodoEntry.TITLE]!!.value == parsedTitle ) {
@@ -77,23 +67,19 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        val updateEntry : ( String , String? , TaskStatus? ) -> Unit = { parsedTitle , parsedDescription , parsedStatus ->
+        val updateEntry : ( Map<TodoEntry,MutableState<String?>> , String , String? , TaskStatus? ) -> Unit = { entry , parsedTitle , parsedDescription , parsedStatus ->
             try {
                 val status = parsedStatus?.identifier ?: TaskStatus.TODO.identifier
-                mainViewModel.todoListDB.delete( parsedTitle )
+                val removeCorrectEntry = entry[TodoEntry.TITLE]?.value ?: parsedTitle
+                mainViewModel.todoListDB.delete( removeCorrectEntry )
                 mainViewModel.todoListDB.insert {
                     put(TodoEntry.TITLE.toString(), parsedTitle)
                     put(TodoEntry.DESCRIPTION.toString(), parsedDescription)
                     put(TodoEntry.STATUS.toString(), status)
                 }
-                for ( entry in mainViewModel.todoList ) {
-                    if ( entry[TodoEntry.TITLE]!!.value == parsedTitle ) {
-                        entry[TodoEntry.TITLE]?.value = parsedTitle
-                        entry[TodoEntry.STATUS]?.value = status
-                        entry[TodoEntry.DESCRIPTION]?.value = parsedDescription
-                        break
-                    }
-                }
+                entry[TodoEntry.TITLE]?.value = parsedTitle
+                entry[TodoEntry.STATUS]?.value = status
+                entry[TodoEntry.DESCRIPTION]?.value = parsedDescription
             } catch ( e : Exception ) {
                 Log.e( "FailedToUpdateEntry" , e.stackTraceToString() )
             }
