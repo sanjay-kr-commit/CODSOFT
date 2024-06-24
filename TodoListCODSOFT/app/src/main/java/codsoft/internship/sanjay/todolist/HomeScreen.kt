@@ -80,35 +80,36 @@ fun HomeScreen(
     }
 
     Scaffold(
-        Modifier
-            .fillMaxSize()
-            .padding(10.dp)
-            .clip(RoundedCornerShape(10.dp)) ,
         bottomBar = {
             FloatingButton( isCreationTabVisible )
         }
     ) {
         it.calculateTopPadding()
-        TaskList(
-            listTask ,
-            updateEntry ,
-            remove ,
-            isCreationTabVisible ,
-            editEntry ,
-            titleField ,
-            descriptionFiled ,
-            statusFiled ,
-            add
-        )
-        EditMenu(
-            isCreationTabVisible ,
-            editEntry ,
-            titleField ,
-            descriptionFiled ,
-            statusFiled ,
-            add ,
-            updateEntry
-        )
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .padding(10.dp)
+            .clip(RoundedCornerShape(10.dp)) ) {
+            TaskList(
+                listTask,
+                updateEntry,
+                remove,
+                isCreationTabVisible,
+                editEntry,
+                titleField,
+                descriptionFiled,
+                statusFiled,
+                add
+            )
+            EditMenu(
+                isCreationTabVisible,
+                editEntry,
+                titleField,
+                descriptionFiled,
+                statusFiled,
+                add,
+                updateEntry
+            )
+        }
     }
 
 }
